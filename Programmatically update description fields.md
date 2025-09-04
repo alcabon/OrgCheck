@@ -208,3 +208,203 @@ class OrgCheckRemediationAPI {
 **Implementation Effort**: Medium - requires Metadata API integration and description generation logic, but leverages existing OrgCheck component analysis capabilities.
 
 The key insight is that OrgCheck already analyzes component structure and relationships - this context can be used to generate meaningful descriptions automatically, making the remediation process both scalable and intelligent.
+
+----
+
+You're absolutely correct about the context challenge. The quality of AI-generated descriptions will vary dramatically based on the complexity and available context of each metadata type.
+
+## Context Richness Analysis by Metadata Type
+
+### **High Context = High AI Success**
+
+**Validation Rules**: Rich semantic context
+```javascript
+// Available context for AI analysis:
+{
+    formula: "AND(LEN(Email__c) > 0, NOT(CONTAINS(Email__c, '@')))",
+    errorMessage: "Email must contain @ symbol",
+    fields: ["Email__c"],
+    active: true
+}
+// AI can easily generate: "Validates email format by ensuring @ symbol is present"
+```
+
+**Custom Fields**: Moderate context
+```javascript
+// Available context:
+{
+    type: "Picklist",
+    required: true,
+    values: ["New", "In Progress", "Completed"],
+    referencedBy: ["WorkflowRule.StatusUpdate", "ValidationRule.StatusCheck"]
+}
+// AI can generate: "Required status tracking field used in workflow automation"
+```
+
+### **Low Context = AI Struggle**
+
+**Flows**: Complex XML with limited semantic meaning
+```xml
+<!-- Flow metadata excerpt -->
+<decisions>
+    <name>Check_Amount</name>
+    <label>Check Amount</label>
+    <locationX>500</locationX>
+    <locationY>200</locationY>
+    <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+    <rules>
+        <name>High_Value</name>
+        <conditionLogic>and</conditionLogic>
+        <conditions>
+            <leftValueReference>$Record.Amount__c</leftValueReference>
+            <operator>GreaterThan</operator>
+            <rightValue>
+                <numberValue>10000.0</numberValue>
+            </rightValue>
+        </conditions>
+    </rules>
+</decisions>
+```
+
+The Flow XML contains positional data, technical references, and logic that requires deep parsing to understand business intent.
+
+## Tiered AI Description Strategy
+
+### **Tier 1: High Confidence (Validation Rules, Field Updates)**
+```javascript
+generateHighConfidenceDescription(validationRule) {
+    const context = {
+        formula: this.parseFormula(validationRule.formula),
+        errorMessage: validationRule.errorMessage,
+        fieldsUsed: this.extractFields(validationRule.formula),
+        businessIntent: this.inferBusinessRule(validationRule.formula)
+    };
+    
+    // AI prompt with rich context
+    return `Based on the validation formula "${context.formula}" and error message "${context.errorMessage}", 
+            this rule ${context.businessIntent}. It validates ${context.fieldsUsed.join(', ')} 
+            to ensure ${this.extractRequirement(context)}.`;
+}
+```
+
+### **Tier 2: Medium Confidence (Custom Fields, Email Templates)**
+```javascript
+generateMediumConfidenceDescription(field) {
+    const context = {
+        type: field.type,
+        required: field.required,
+        relationships: this.findRelationships(field),
+        usage: this.analyzeUsage(field)
+    };
+    
+    // Generate description with confidence indicator
+    return {
+        description: `${field.type} field for ${this.inferPurpose(context)}`,
+        confidence: 0.7,
+        requiresReview: true
+    };
+}
+```
+
+### **Tier 3: Template-Based (Flows, Complex Components)**
+```javascript
+generateTemplateDescription(flow) {
+    const analysis = {
+        triggerType: this.parseTriggerType(flow),
+        objects: this.extractObjects(flow),
+        actions: this.summarizeActions(flow),
+        complexity: this.calculateComplexity(flow)
+    };
+    
+    // Provide template with placeholders for human completion
+    return {
+        template: `Automated ${analysis.triggerType} process for ${analysis.objects.join(', ')}. 
+                  Performs ${analysis.actions.length} actions including [MANUAL_REVIEW_NEEDED]. 
+                  Business purpose: [TO_BE_COMPLETED]`,
+        confidence: 0.3,
+        requiresManualCompletion: true,
+        analysisContext: analysis
+    };
+}
+```
+
+## Enhanced Implementation with Context Awareness
+
+### **Smart Context Extraction**
+```javascript
+class ContextAnalyzer {
+    analyzeComponent(component) {
+        const contextLevel = this.assessContextRichness(component);
+        
+        switch(contextLevel) {
+            case 'HIGH':
+                return this.fullAIGeneration(component);
+            case 'MEDIUM':
+                return this.assistedGeneration(component);
+            case 'LOW':
+                return this.templateGeneration(component);
+        }
+    }
+    
+    assessContextRichness(component) {
+        const factors = {
+            semanticClarity: this.hasBusinessLogic(component),
+            fieldReferences: this.countFieldReferences(component),
+            relationships: this.findRelationships(component),
+            documentation: this.hasExistingContext(component)
+        };
+        
+        const score = Object.values(factors).reduce((sum, val) => sum + val, 0);
+        
+        if (score >= 3) return 'HIGH';
+        if (score >= 2) return 'MEDIUM';
+        return 'LOW';
+    }
+}
+```
+
+### **Human-AI Collaboration Interface**
+```javascript
+// For complex components like Flows
+const descriptionWizard = {
+    analyzeFlow(flowMetadata) {
+        const analysis = {
+            trigger: "Record Update on Opportunity",
+            conditions: ["Amount > 10000", "Stage = 'Closed Won'"],
+            actions: ["Create Task", "Send Email", "Update Field"],
+            objects: ["Opportunity", "Task", "User"]
+        };
+        
+        return {
+            suggestedDescription: this.generateTemplate(analysis),
+            questions: [
+                "What business process does this automate?",
+                "Who are the primary users affected?",
+                "What triggers this flow in real business scenarios?"
+            ],
+            contextHints: analysis
+        };
+    }
+};
+```
+
+## Realistic Implementation Roadmap
+
+**Phase 1: High-Confidence Components (80% automation)**
+- Validation Rules: Near-perfect AI generation
+- Field Updates: Strong context from target fields
+- Simple Custom Fields: Type-based descriptions
+
+**Phase 2: Medium-Confidence Components (60% automation)**
+- Complex Custom Fields: Relationship analysis
+- Email Templates: Content analysis
+- Static Resources: File type and naming analysis
+
+**Phase 3: Low-Confidence Components (30% automation)**
+- Flows: Template generation + human completion
+- Lightning Components: Code analysis + manual review
+- Complex Workflows: Multi-step process templates
+
+The key insight is treating this as **AI-assisted documentation** rather than full automation. For complex components like Flows, the AI provides structure and context analysis, but human business knowledge completes the meaningful description.
+
+This approach could still eliminate 70% of missing description flags while ensuring quality remains high for business-critical documentation.
