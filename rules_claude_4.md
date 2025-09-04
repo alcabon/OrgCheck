@@ -25,6 +25,7 @@ The rules focus heavily on identifying unused/unnecessary components (24% of rul
 
 Would you like me to dive deeper into any specific category or provide additional analysis of particular rules?
 
+
 # OrgCheck Score Rules - Complete Reference Table with Technical Implementation
 
 | Rule ID | Rule Name | Category | Salesforce Artifacts Targeted | Description | Formula Logic | Technical Implementation & Data Sources |
@@ -88,6 +89,166 @@ Would you like me to dive deeper into any specific category or provide additiona
 | 56 | Custom permission set group with no member | Useless | Permission Set Groups | Custom permission set group has no members assigned | isCustom = true AND isGroup = true AND memberCounts = 0 | **Group Type**: PermissionSet.Type = 'Group' and assignment counts **Check**: `d?.isCustom === true && d?.isGroup === true && d?.memberCounts === 0` |
 | 57 | Custom permission set with no member and not even assigned to group | Useless | Permission Sets | Custom permission set has no members and isn't assigned to any permission set group | isCustom = true AND isGroup = false AND memberCounts = 0 AND permissionSetGroupIds array is empty | **Assignment Analysis**: PermissionSetGroupComponent relationships **Check**: `d?.isCustom === true && d?.isGroup === false && d?.memberCounts === 0 && d?.permissionSetGroupIds?.length === 0` |
 
+## Technical Architecture & Data Flow
+
+### Core Components
+
+**DataFactory System**
+- Each Salesforce object type (SFDC_ApexClass, SFDC_Field, etc.) has a corresponding DataFactory
+- Factories handle object creation, dependency injection, and score computation
+- Score calculation triggered via `dataFactory.computeScore(item)` or `dataFactory.createWithScore()`
+
+**Dataset Classes (Data Extraction)**
+- Each dataset class inherits from `Dataset` base class
+- Implements `async run(sfdcManager, dataFactory, logger, parameters)` method
+- Combines SOQL/SOSL queries, Metadata API calls, and Dependency API calls
+- Examples: `DatasetApexClasses`, `DatasetCustomFields`, `DatasetFlows`
+
+**Recipe Classes (Data Transformation)**
+- Transform raw dataset results into filtered, augmented arrays/matrices
+- Implement `extract()` for dataset dependencies and `transform()` for business logic
+- Handle namespace filtering, cross-referencing, and relationship building
+- Examples: `RecipeApexClasses`, `RecipeCustomFields`, `RecipeFlows`
+
+### Key Technical Patterns
+
+**Dependency Resolution**
+```javascript
+const dependencies = await sfdcManager.dependenciesQuery(itemIds, logger);
+// Creates dependency data structure with hadError flag and referenced arrays
+```
+
+**Code Analysis**
+```javascript
+const sourceCode = CodeScanner.RemoveCommentsFromCode(record.Body);
+item.hardCodedURLs = CodeScanner.FindHardCodedURLs(sourceCode);
+item.hasSOQL = CodeScanner.HasSOQLFromApexCode(sourceCode);
+```
+
+**Metadata API Integration**
+```javascript
+const records = await sfdcManager.readMetadataAtScale('Profile', profileIds, [], logger);
+// Bulk metadata retrieval with error handling
+```
+
+**API Version Calculation**
+```javascript
+const GET_LATEST_API_VERSION = () => {
+    const TODAY = new Date();
+    const THIS_YEAR = TODAY.getFullYear();
+    const THIS_MONTH = TODAY.getMonth()+1;
+    return 3*(THIS_YEAR-2022)+53+(THIS_MONTH<=2?0:(THIS_MONTH<=6?1:(THIS_MONTH<=10?2:3)));
+}
+```
+
+### Data Sources by Category
+
+**Tooling API Sources**
+- ApexClass, ApexTrigger, ApexCodeCoverage, ApexCodeCoverageAggregate
+- FlowDefinition, Flow, WorkflowRule
+- EntityDefinition, FieldDefinition, CustomField
+- Layout, ValidationRule, WebLink
+
+**REST API Sources**
+- User, Profile, PermissionSet, PermissionSetAssignment
+- Group, UserRole, Organization
+- Document, EmailTemplate, StaticResource
+
+**Metadata API Sources**
+- Profile metadata (password policies, restrictions)
+- WorkflowRule details, Flow definitions
+- ProfilePasswordPolicy configurations
+
+**Dependency API**
+- Cross-component references and usage tracking
+- Identifies orphaned components across all metadata types
+
+## Rule Categories Deep Dive
+
+**Dependencies (4 rules)**: Use Salesforce Dependency API to identify unused components
+**API Version (2 rules)**: Compare component versions against calculated current API version  
+**Code Quality (8 rules)**: Analyze Apex code structure, coverage, and best practices
+**Documentation (4 rules)**: Check for empty description fields across components
+**User Adoption (2 rules)**: Track Lightning Experience adoption and login patterns
+**Security (10 rules)**: Validate password policies, IP restrictions, and sharing models
+**Useless (14 rules)**: Identify inactive, unassigned, or redundant components
+**Overuse (2 rules)**: Monitor org limits and license consumption
+**Hard-coded URLs/IDs (5 rules)**: Scan code and configuration for hard-coded values
+
+## Additional Technical Architecture Insights
+
+### API Class Structure & Public Interface
+
+The main API class provides a comprehensive public interface with **80+ methods** organized into:
+
+**Core System Management**
+- Version information (`version`, `salesforceApiVersion`) 
+- Cache management (`removeAllFromCache()`, `getCacheInformation()`)
+- Security validation (`checkUsageTerms()`, `checkCurrentUserPermissions()`)
+- API usage monitoring (`dailyApiRequestLimitInformation`)
+
+**Data Retrieval Methods (60+ endpoints)**
+Each Salesforce metadata type has dedicated getter methods following the pattern:
+- `get{MetadataType}(namespace?, sobjectType?, sobject?)` - Retrieve filtered data
+- `removeAll{MetadataType}FromCache()` - Cache invalidation
+
+**Special Features**
+- `getAllScoreRulesAsDataMatrix()` - Returns all 58 rules in matrix format
+- `getRolesTree()` - Hierarchical role structure with artificial root node
+- `runAllTestsAsync()` - Asynchronous test execution
+- `compileClasses(apexClassIds)` - Bulk Apex compilation
+
+### Advanced Technical Features
+
+**Multi-Level Filtering System**
+Parameters flow through Recipe→Dataset chain:
+```javascript
+const parameters = new Map([
+    [OrgCheckGlobalParameter.PACKAGE_NAME, namespace],
+    [OrgCheckGlobalParameter.SOBJECT_TYPE_NAME, sobjectType], 
+    [OrgCheckGlobalParameter.SOBJECT_NAME, sobject]
+]);
+```
+
+**Hierarchical Data Transformation**
+Role tree construction demonstrates sophisticated data manipulation:
+```javascript
+// Creates artificial root node for forest-to-tree conversion
+const ROOT_KEY = '__i am root__';
+// Bidirectional parent-child relationship building
+// Handles orphaned nodes and complex hierarchy structures
+```
+
+**Matrix Data Structures**
+Cross-referencing permissions use DataMatrix for efficient lookups:
+- Object Permissions (Profiles/PermSets × Objects)
+- Field Permissions (Profiles/PermSets × Fields)  
+- Application Permissions (Profiles/PermSets × Apps)
+
+### Version & Compatibility Information
+
+**Current Version**: Carbon [C,6] - Element naming convention suggests periodic major releases
+**Salesforce API**: Dynamic version calculation ensures compatibility with latest features
+**Dependency Management**: 45+ Dataset classes, 35+ Recipe classes, 25+ Data model classes
+
+### Error Handling & Validation
+
+**Permission Validation**: Requires 4 critical permissions:
+- ModifyAllData, AuthorApex, ApiEnabled, InstallPackaging
+- Detailed HTML error messages for missing permissions
+
+**Production Safety**: 
+- Manual acceptance required for production orgs
+- Usage terms validation before any operations
+- API consumption monitoring with confidence levels
+
+**Graceful Degradation**:
+- Bypass mechanisms for unsupported features (`byPasses: ['INVALID_TYPE']`)
+- Error handling in Dependency API calls
+- Fallback strategies for metadata retrieval failures
+
+*Total Rules: 58 (IDs 0-57) - Implemented across 45+ Dataset classes and 35+ Recipe classes*
+*Public API: 80+ methods exposing comprehensive Salesforce metadata analysis capabilities*
 ## Technical Architecture & Data Flow
 
 ### Core Components
