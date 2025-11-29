@@ -37,13 +37,14 @@ export class DatasetFieldPermissions extends Dataset {
         const fieldPermissions = new Map(await Processor.map(permissions, 
             (/** @type {any} */ record) => {
                 // Get the ID15 of this parent
-                const parentId = sfdcManager.caseSafeId(record.Parent.IsOwnedByProfile ? record.Parent.ProfileId : record.ParentId);
+                const parentId = sfdcManager.caseSafeId(record.Parent.IsOwnedByProfile === true ? record.Parent.ProfileId : record.ParentId);
 
                 // Get only the name of the field without the object name (and by the way without dot
                 const indeOfDot = record.Field.indexOf('.');
                 const fieldName = indeOfDot === -1 ? record.Field : record.Field.substring(indeOfDot + 1);
 
                 // Create the instance
+                /** @type {SFDC_FieldPermission} */
                 const fieldPermission = fieldPermissionDataFactory.create({
                     properties: {
                         fieldApiName: fieldName,
@@ -55,9 +56,20 @@ export class DatasetFieldPermissions extends Dataset {
 
                 // Add the app in map
                 return [ `${record.Field}-${parentId}`, fieldPermission ];
+            }, 
+            (/** @type {any} */ record) => {
+                // We do not want records with no Parent structure
+                if (!record.Parent) return false;
+                // We do not want records with no ParentId
+                if (!record.ParentId) return false;
+                // We do not want records with parentId not starting with '0PS'
+                if (`${record.ParentId}`.startsWith('0PS') === false) return false;
+                // We do not want records with no Field
+                if (!record.Field) return false;
+                // otherwise
+                return true;
             }
         ));
-
         // Return data as map
         logger?.log(`Done`);
         return fieldPermissions;

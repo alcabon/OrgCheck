@@ -2,9 +2,11 @@ import { DataWithDependencies } from './orgcheck-api-data';
 import { ScoreRule } from './orgcheck-api-datafactory';
 import { SFDC_ApexClass } from '../data/orgcheck-api-data-apexclass';
 import { SFDC_ApexTrigger } from '../data/orgcheck-api-data-apextrigger';
+import { SFDC_Browser } from '../data/orgcheck-api-data-browser';
 import { SFDC_CollaborationGroup } from '../data/orgcheck-api-data-collaborationgroup';
 import { SFDC_CustomLabel } from '../data/orgcheck-api-data-customlabel';
 import { SFDC_CustomTab } from '../data/orgcheck-api-data-customtab';
+import { SFDC_Dashboard } from '../data/orgcheck-api-data-dashboard';
 import { SFDC_Document } from '../data/orgcheck-api-data-document';
 import { SFDC_EmailTemplate } from '../data/orgcheck-api-data-emailtemplate';
 import { SFDC_Field } from '../data/orgcheck-api-data-field';
@@ -12,10 +14,12 @@ import { SFDC_FieldSet } from '../data/orgcheck-api-data-fieldset';
 import { SFDC_Flow } from '../data/orgcheck-api-data-flow';
 import { SFDC_Group } from '../data/orgcheck-api-data-group';
 import { SFDC_HomePageComponent } from '../data/orgcheck-api-data-homepagecomponent';
+import { SFDC_KnowledgeArticle } from '../data/orgcheck-api-data-knowledgearticle';
 import { SFDC_LightningAuraComponent } from '../data/orgcheck-api-data-lightningauracomponent';
 import { SFDC_LightningPage } from '../data/orgcheck-api-data-lightningpage';
 import { SFDC_LightningWebComponent } from '../data/orgcheck-api-data-lightningwebcomponent';
 import { SFDC_Limit } from '../data/orgcheck-api-data-limit';
+import { SFDC_Object } from '../data/orgcheck-api-data-object';
 import { SFDC_PageLayout } from '../data/orgcheck-api-data-pagelayout';
 import { SFDC_PermissionSet } from '../data/orgcheck-api-data-permissionset';
 import { SFDC_PermissionSetLicense } from '../data/orgcheck-api-data-permissionsetlicense';
@@ -23,6 +27,8 @@ import { SFDC_Profile } from '../data/orgcheck-api-data-profile';
 import { SFDC_ProfilePasswordPolicy } from '../data/orgcheck-api-data-profilepasswordpolicy';
 import { SFDC_ProfileRestrictions } from '../data/orgcheck-api-data-profilerestrictions';
 import { SFDC_RecordType } from '../data/orgcheck-api-data-recordtype';
+import { SFDC_Report } from '../data/orgcheck-api-data-report';
+import { SFDC_StaticResource } from '../data/orgcheck-api-data-staticresource';
 import { SFDC_User } from '../data/orgcheck-api-data-user';
 import { SFDC_UserRole } from '../data/orgcheck-api-data-userrole';
 import { SFDC_ValidationRule } from '../data/orgcheck-api-data-validationrule';
@@ -30,8 +36,6 @@ import { SFDC_VisualForceComponent } from '../data/orgcheck-api-data-visualforce
 import { SFDC_VisualForcePage } from '../data/orgcheck-api-data-visualforcepage';
 import { SFDC_WebLink } from '../data/orgcheck-api-data-weblink';
 import { SFDC_Workflow } from '../data/orgcheck-api-data-workflow.js';
-import { SFDC_KnowledgeArticle } from '../data/orgcheck-api-data-knowledgearticle';
-import { SFDC_StaticResource } from '../data/orgcheck-api-data-staticresource';
 
 /**
  * @description Checks if the difference bewteen the given current version and the api version is more than three years (or more if specified)
@@ -157,10 +161,10 @@ const ALL_SCORE_RULES = [
     }, {
         id: 6,
         description: 'No description',
-        formula: (/** @type { SFDC_LightningPage | SFDC_LightningAuraComponent | SFDC_LightningWebComponent | SFDC_VisualForcePage | SFDC_VisualForceComponent | SFDC_Workflow | SFDC_WebLink | SFDC_FieldSet | SFDC_ValidationRule | SFDC_Document | SFDC_CustomTab | SFDC_EmailTemplate | SFDC_StaticResource } */ d) => IS_EMPTY(d?.description),
+        formula: (/** @type { SFDC_LightningPage | SFDC_LightningAuraComponent | SFDC_LightningWebComponent | SFDC_VisualForcePage | SFDC_VisualForceComponent | SFDC_Workflow | SFDC_WebLink | SFDC_FieldSet | SFDC_ValidationRule | SFDC_Document | SFDC_CustomTab | SFDC_EmailTemplate | SFDC_StaticResource | SFDC_Report | SFDC_Dashboard } */ d) => IS_EMPTY(d?.description),
         errorMessage: `This component does not have a description. Best practices force you to use the Description field to give some informative context about why and how it is used/set/govern.`,
         badField: 'description',
-        applicable: [ SFDC_LightningPage, SFDC_LightningAuraComponent, SFDC_LightningWebComponent, SFDC_VisualForcePage, SFDC_VisualForceComponent, SFDC_Workflow, SFDC_WebLink, SFDC_FieldSet, SFDC_ValidationRule, SFDC_Document, SFDC_CustomTab, SFDC_EmailTemplate, SFDC_StaticResource ],
+        applicable: [ SFDC_LightningPage, SFDC_LightningAuraComponent, SFDC_LightningWebComponent, SFDC_VisualForcePage, SFDC_VisualForceComponent, SFDC_Workflow, SFDC_WebLink, SFDC_FieldSet, SFDC_ValidationRule, SFDC_Document, SFDC_CustomTab, SFDC_EmailTemplate, SFDC_StaticResource, SFDC_Report, SFDC_Dashboard ],
         category: SCORE_RULE_CATEGORIES.DOCUMENTATION
     }, {
         id: 7,
@@ -252,9 +256,9 @@ const ALL_SCORE_RULES = [
         category: SCORE_RULE_CATEGORIES.USELESS
     }, {
         id: 18,
-        description: 'Custom profile with no member',
+        description: 'Custom profile with no active member',
         formula: (/** @type {SFDC_Profile} */ d) => d?.isCustom === true && d?.memberCounts === 0,
-        errorMessage: `This custom profile has no members. Is it empty on purpose? Maybe you should review its use in your org...`,
+        errorMessage: `This custom profile has no active members. Is it empty on purpose? Maybe you should review its use in your org...`,
         badField: 'memberCounts',
         applicable: [ SFDC_Profile ],
         category: SCORE_RULE_CATEGORIES.USELESS
@@ -364,9 +368,9 @@ const ALL_SCORE_RULES = [
         category: SCORE_RULE_CATEGORIES.SECURITY
     }, {
         id: 32,
-        description: 'IP Range too large',
+        description: 'IP Range too large (> 100,000)',
         formula: (/** @type {SFDC_ProfileRestrictions} */ d) => d?.ipRanges.filter(i => i.difference > 100000).length > 0,
-        errorMessage: `This profile includes an IP range that is too wide (more than 100.000 IP addresses!). If you set an IP Range it should be not that large. You could split that range into multiple ones. The risk is that you include an IP that is not part of your company. Please review this setting.`,
+        errorMessage: `This profile includes an IP range that is too wide (more than 100,000 IP addresses!). If you set an IP Range it should be not that large. You could split that range into multiple ones. The risk is that you include an IP that is not part of your company. Please review this setting.`,
         badField: 'ipRanges',
         applicable: [ SFDC_ProfileRestrictions ],
         category: SCORE_RULE_CATEGORIES.SECURITY
@@ -548,28 +552,168 @@ const ALL_SCORE_RULES = [
         category: SCORE_RULE_CATEGORIES.HARDCODED_URL
     }, {
         id: 55,
-        description: 'Custom permission set with no member and only assigned to empty group(s)',
+        description: 'Custom permission set with no active member and only assigned to empty group(s)',
         formula: (/** @type {SFDC_PermissionSet} */ d) => d?.isCustom === true && d?.isGroup === false && d?.memberCounts === 0 && d?.allIncludingGroupsAreEmpty === true,
-        errorMessage: `This custom permission set has no members and is only included in empty permission set groups. Is it on purpose? Maybe you should review its use in your org...`,
+        errorMessage: `This custom permission set has no active members and is only included in empty permission set groups. Is it on purpose? Maybe you should review its use in your org...`,
         badField: 'allIncludingGroupsAreEmpty',
         applicable: [ SFDC_PermissionSet ],
         category: SCORE_RULE_CATEGORIES.USELESS
     }, {
         id: 56,
-        description: 'Custom permission set group with no member',
+        description: 'Custom permission set group with no active member',
         formula: (/** @type {SFDC_PermissionSet} */ d) => d?.isCustom === true && d?.isGroup === true && d?.memberCounts === 0,
-        errorMessage: `This custom permission set group has no members. Is it empty on purpose? Maybe you should review its use in your org...`,
+        errorMessage: `This custom permission set group has no active members. Is it empty on purpose? Maybe you should review its use in your org...`,
         badField: 'memberCounts',
         applicable: [ SFDC_PermissionSet ],
         category: SCORE_RULE_CATEGORIES.USELESS
     }, {
         id: 57,
-        description: 'Custom permission set with no member and not even assigned to group',
+        description: 'Custom permission set with no active member and not even assigned to group',
         formula: (/** @type {SFDC_PermissionSet} */ d) => d?.isCustom === true && d?.isGroup === false && d?.memberCounts === 0 && d?.permissionSetGroupIds?.length === 0,
-        errorMessage: `This custom permission set has no members and is not even assigned to a permission set group. Is it on purpose? Maybe you should review its use in your org...`,
+        errorMessage: `This custom permission set has no active members and is not even assigned to a permission set group. Is it on purpose? Maybe you should review its use in your org...`,
         badField: 'memberCounts',
         applicable: [ SFDC_PermissionSet ],
         category: SCORE_RULE_CATEGORIES.USELESS
+    }, {
+        id: 58,
+        description: 'IP Range too large (> 16,777,216)',
+        formula: (/** @type {SFDC_ProfileRestrictions} */ d) => d?.ipRanges.filter(i => i.difference > 16777216).length > 0,
+        errorMessage: `This profile includes an IP range that is too wide (more than 16,777,216 IP addresses!). If you set an IP Range it should be not that large. You could split that range into multiple ones. The risk is that you include an IP that is not part of your company. Please review this setting.`,
+        badField: 'ipRanges',
+        applicable: [ SFDC_ProfileRestrictions ],
+        category: SCORE_RULE_CATEGORIES.SECURITY
+    }, {
+        id: 59,
+        description: 'Object with more than 350 custom fields',
+        formula: (/** @type {SFDC_Object} */ d) => d?.nbCustomFields > 350,
+        errorMessage: `This object has more than 350 custom fields. Please consider reducing that number as it can impact performance and usability.`,
+        badField: 'nbCustomFields',
+        applicable: [ SFDC_Object ],
+        category: SCORE_RULE_CATEGORIES.OVERUSE
+    }, {
+        id: 60,
+        description: 'Object with more than 15 page layouts',
+        formula: (/** @type {SFDC_Object} */ d) => d?.nbPageLayouts > 15,
+        errorMessage: `This object has more than 15 page layouts. Please consider reducing that number as it can impact performance and usability.`,
+        badField: 'nbPageLayouts',
+        applicable: [ SFDC_Object ],
+        category: SCORE_RULE_CATEGORIES.OVERUSE
+    }, {
+        id: 61,
+        description: 'Object with more than 20 workflow rules',
+        formula: (/** @type {SFDC_Object} */ d) => d?.nbWorkflowRules > 20,
+        errorMessage: `This object has more than 20 workflow rules. Please consider reducing that number as it can impact performance and usability.`,
+        badField: 'nbWorkflowRules',
+        applicable: [ SFDC_Object ],
+        category: SCORE_RULE_CATEGORIES.OVERUSE
+    }, {
+        id: 62,
+        description: 'Object with more than 20 validation rules',
+        formula: (/** @type {SFDC_Object} */ d) => d?.nbValidationRules > 20,
+        errorMessage: `This object has more than 20 validation rules. Please consider reducing that number as it can impact performance and usability.`,
+        badField: 'nbValidationRules',
+        applicable: [ SFDC_Object ],
+        category: SCORE_RULE_CATEGORIES.OVERUSE
+    }, {
+        id: 63,
+        description: 'Page layout with more than 100 fields',
+        formula: (/** @type {SFDC_PageLayout} */ d) => d?.nbFields > 100,
+        errorMessage: `This page layout has more than 100 fields. Please consider reducing that number as it can impact user adoption.`,
+        badField: 'nbFields',
+        applicable: [ SFDC_PageLayout ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
+    }, {
+        id: 64,
+        description: 'Page layout with more than 11 related lists',
+        formula: (/** @type {SFDC_PageLayout} */ d) => d?.nbRelatedLists > 11,
+        errorMessage: `This page layout has more than 11 related lists. Please consider reducing that number as it can impact user adoption.`,
+        badField: 'nbRelatedLists',
+        applicable: [ SFDC_PageLayout ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
+    }, {
+        id: 65,
+        description: 'Page layout with Notes and Attachments related list',
+        formula: (/** @type {SFDC_PageLayout} */ d) => d?.isAttachmentRelatedListIncluded === true,
+        errorMessage: `This page layout has the Notes and Attachments related list in it. Please consider using the Files related list instead.`,
+        badField: 'isAttachmentRelatedListIncluded',
+        applicable: [ SFDC_PageLayout ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
+    }, {
+        id: 66,
+        description: 'Custom profile with low number of active members',
+        formula: (/** @type {SFDC_Profile} */ d) => d?.isCustom === true && d?.memberCounts <= 10,
+        errorMessage: `This custom profile has a low number of active members (<= 10). Maybe you should review its use in your org...`,
+        badField: 'memberCounts',
+        applicable: [ SFDC_Profile ],
+        category: SCORE_RULE_CATEGORIES.USELESS
+    }, {
+        id: 67,
+        description: 'Custom permission set with low number of active members and only assigned to empty group(s)',
+        formula: (/** @type {SFDC_PermissionSet} */ d) => d?.isCustom === true && d?.isGroup === false && d?.memberCounts <= 10 && d?.allIncludingGroupsAreEmpty === true,
+        errorMessage: `This custom permission set has a low number of active members (<= 10) and is only included in empty permission set groups. Is it on purpose? Maybe you should review its use in your org...`,
+        badField: 'allIncludingGroupsAreEmpty',
+        applicable: [ SFDC_PermissionSet ],
+        category: SCORE_RULE_CATEGORIES.USELESS
+    }, {
+        id: 68,
+        description: 'Custom permission set group with low number of active members',
+        formula: (/** @type {SFDC_PermissionSet} */ d) => d?.isCustom === true && d?.isGroup === true && d?.memberCounts <= 10,
+        errorMessage: `This custom permission set group has a low number of active members (<= 10). Is it empty on purpose? Maybe you should review its use in your org...`,
+        badField: 'memberCounts',
+        applicable: [ SFDC_PermissionSet ],
+        category: SCORE_RULE_CATEGORIES.USELESS
+    }, {
+        id: 69,
+        description: 'Custom permission set with low number of active members and not even assigned to group',
+        formula: (/** @type {SFDC_PermissionSet} */ d) => d?.isCustom === true && d?.isGroup === false && d?.memberCounts <= 10 && d?.permissionSetGroupIds?.length === 0,
+        errorMessage: `This custom permission set has a low number of active members (<= 10) and is not even assigned to a permission set group. Is it on purpose? Maybe you should review its use in your org...`,
+        badField: 'memberCounts',
+        applicable: [ SFDC_PermissionSet ],
+        category: SCORE_RULE_CATEGORIES.USELESS
+    }, {
+        id: 70,
+        description: 'This browser is considered out-of-date by Salesforce',
+        formula: (/** @type {SFDC_Browser} */ d) => 
+            (d.name === 'Chrome' && d.version < 88) ||
+            (d.name === 'Edge' && d.version < 91) ||
+            (d.name === 'Firefox' && d.version < 88) ||
+            (d.name === 'Safari' && d.version < 14),
+        errorMessage: `This browser is considered out-of-date by Salesforce. At this time, we consider the following list: Chrome <88, Edge <91, Firefox <88 and Safari <14. Please work with your user to make them switch to a more recent/supported browser. To identity the users you can go to the setup page "Login History" and export the data to identify them.`,
+        badField: 'fullName',
+        applicable: [ SFDC_Browser ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
+    }, {
+        id: 71,
+        description: 'This browser is unsupported by Salesforce',
+        formula: (/** @type {SFDC_Browser} */ d) => d.name === 'IE',
+        errorMessage: `This browser is unsupported by Salesforce. At this time, we consider only Internet Explorer whatever its version. Please work with your user to make them switch to a more recent/supported browser. To identity the users you can go to the setup page "Login History" and export the data to identify them.`,
+        badField: 'name',
+        applicable: [ SFDC_Browser ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
+    }, {
+        id: 72,
+        description: 'User is logging directly without MFA',
+        formula: (/** @type {SFDC_User} */ d) => d.nbDirectLoginWithoutMFA > 0 && d.hasMfaByPass !== true,
+        errorMessage: `This user is logging in directly to Salesforce without using MFA (Multi-Factor Authentication). And this user has not the MFA bypass enabled. Please work with your user to make them use MFA for better security.`,
+        badField: 'nbDirectLoginWithoutMFA',
+        applicable: [ SFDC_User ],
+        category: SCORE_RULE_CATEGORIES.SECURITY
+    }, {
+        id: 73,
+        description: 'Lightning page with Notes and Attachments related list',
+        formula: (/** @type {SFDC_LightningPage} */ d) => d?.isAttachmentRelatedListIncluded === true,
+        errorMessage: `This lightning page has the Notes and Attachments related list in it. Please consider using the Files related list instead.`,
+        badField: 'isAttachmentRelatedListIncluded',
+        applicable: [ SFDC_LightningPage ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
+    } , {
+        id: 74,
+        description: 'User with debug mode enabled',
+        formula: (/** @type {SFDC_User} */ d) => d?.hasDebugMode === true,
+        errorMessage: `This user has the debug mode enabled. Please disable it for better performance and user adoption.`,
+        badField: 'hasDebugMode',
+        applicable: [ SFDC_User ],
+        category: SCORE_RULE_CATEGORIES.USER_ADOPTION
     }
 ];
 Object.freeze(ALL_SCORE_RULES);

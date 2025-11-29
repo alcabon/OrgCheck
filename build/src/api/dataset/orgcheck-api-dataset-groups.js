@@ -51,7 +51,7 @@ export class DatasetGroups extends Dataset {
                 case 'RoleAndSubordinates':
                 case 'RoleAndSubordinatesInternal': {
                     groupType = SalesforceMetadataTypes.ROLE;
-                    groupName = record.Related.Name;
+                    groupName = record.Related?.Name ?? '(unknown)';
                     groupIncludesSubordinates = record.Type !== 'Role';
                     groupRelatedId = sfdcManager.caseSafeId(record.RelatedId);
                     break;
@@ -81,6 +81,7 @@ export class DatasetGroups extends Dataset {
             }
 
             // Create the instance (common one)
+            /** @type {SFDC_Group} */
             const group = groupDataFactory.createWithScore({
                 properties: {
                     id: groupId,

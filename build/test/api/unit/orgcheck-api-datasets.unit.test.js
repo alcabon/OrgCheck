@@ -45,8 +45,8 @@ class SfdcManagerMock extends SalesforceManagerIntf {
   #soqlQueryResponses = {};
   #describeGlobal = [];
 
-  addSoqlQueryResponse(queryMatch, records) {
-    this.#soqlQueryResponses[queryMatch] = records;
+  addSoqlQueryResponse(/** @type {string} */ queryMatch, /** @type {Array<any>} */ response) {
+    this.#soqlQueryResponses[queryMatch] = response;
   }
 
   setDescribeGolbal(describeGlobal) {
@@ -72,7 +72,8 @@ class SfdcManagerMock extends SalesforceManagerIntf {
   async soqlQuery(queries, _logger) { 
     return queries.map((query) => { 
       const key = Object.keys(this.#soqlQueryResponses).find((p) => query?.string?.indexOf(p) !== -1);
-      return (key ? this.#soqlQueryResponses[key] : []); 
+      const response = this.#soqlQueryResponses[key];
+      return response ?? [];
     });
   }
 
@@ -220,6 +221,75 @@ describe('tests.api.unit.Datasets', () => {
     });
   });
 
+  describe('Specific test for DatasetGroups', () => {
+    const dataset = new DatasetGroups();      
+    it('checks if mapping is correct', async() => {
+      const sfdcManager = new SfdcManagerMock();
+      const dataFactory = new DataFactoryMock();
+      sfdcManager.addSoqlQueryResponse('FROM Group ', [
+        { Id: '01', Name: 'n01', DeveloperName: 'dn01', DoesIncludeBosses: true,  Type: 'Regular' },
+        { Id: '02', Name: 'n02', DeveloperName: 'dn02', DoesIncludeBosses: false, Type: 'Regular' },
+        { Id: '03', Name: 'n03', DeveloperName: 'dn03', DoesIncludeBosses: false, Type: 'Queue' },
+        { Id: '04', Name: 'n04', DeveloperName: 'dn04', DoesIncludeBosses: true,  Type: 'Role', RelatedId: '0A', Related: { Name: 'n0A' } },
+        { Id: '05', Name: 'n05', DeveloperName: 'dn05', DoesIncludeBosses: false, Type: 'RoleAndSubordinates', RelatedId: '0B', Related: { Name: 'n0B' }},
+        { Id: '06', Name: 'n06', DeveloperName: 'dn06', DoesIncludeBosses: false, Type: 'RoleAndSubordinatesInternal' },
+        { Id: '07', Name: 'n07', DeveloperName: 'dn07', DoesIncludeBosses: false, Type: 'AllCustomerPortal' },
+        { Id: '08', Name: 'n08', DeveloperName: 'dn08', DoesIncludeBosses: false, Type: 'Organization' },
+        { Id: '09', Name: 'n09', DeveloperName: 'dn09', DoesIncludeBosses: false, Type: 'PRMOrganization' },
+        { Id: '10', Name: 'n10', DeveloperName: 'dn10', DoesIncludeBosses: false, Type: 'GuestUserGroup' },
+      ]);
+      const logger = new SimpleLoggerMock();
+      const results = await dataset.run(sfdcManager, dataFactory, logger);
+      expect(results).toBeDefined();
+      expect(results instanceof Map).toBeTruthy();
+      expect(results.size).toBe(10);
+      expect(results.get('01').name).toBe('n01');
+      expect(results.get('01').developerName).toBe('dn01');
+      expect(results.get('01').type).toBe('PublicGroup');
+      expect(results.get('01').isPublicGroup).toBeTruthy();
+      expect(results.get('01').isQueue).toBeFalsy();
+      expect(results.get('01').nbDirectMembers).toBe(0);
+      expect(results.get('01').directUserIds.length).toBe(0);
+      expect(results.get('01').directGroupIds.length).toBe(0);
+      expect(results.get('01').includeBosses).toBeTruthy();
+      expect(results.get('01').includeSubordinates).toBeFalsy();
+      expect(results.get('01').relatedId).toBeUndefined();
+      expect(results.get('03').name).toBe('n03');
+      expect(results.get('03').developerName).toBe('dn03');
+      expect(results.get('03').type).toBe('Queue');
+      expect(results.get('03').isPublicGroup).toBeFalsy();
+      expect(results.get('03').isQueue).toBeTruthy();
+      expect(results.get('03').nbDirectMembers).toBe(0);
+      expect(results.get('03').directUserIds.length).toBe(0);
+      expect(results.get('03').directGroupIds.length).toBe(0);
+      expect(results.get('03').includeBosses).toBeFalsy();
+      expect(results.get('03').includeSubordinates).toBeFalsy();
+      expect(results.get('03').relatedId).toBeUndefined();
+      expect(results.get('04').name).toBe('n0A'); // should be the name of the related role!
+      expect(results.get('04').developerName).toBeUndefined(); // no developer name for roles
+      expect(results.get('04').type).toBe('UserRole');
+      expect(results.get('04').isPublicGroup).toBeFalsy();
+      expect(results.get('04').isQueue).toBeFalsy();
+      expect(results.get('04').nbDirectMembers).toBe(0);
+      expect(results.get('04').directUserIds.length).toBe(0);
+      expect(results.get('04').directGroupIds.length).toBe(0);
+      expect(results.get('04').includeBosses).toBeFalsy();
+      expect(results.get('04').includeSubordinates).toBeFalsy();
+      expect(results.get('04').relatedId).toBe('0A');
+      expect(results.get('06').name).toBe('(unknown)'); // In this case we do not have a related role so name is unknown!
+      expect(results.get('06').developerName).toBeUndefined(); // no developer name for roles
+      expect(results.get('06').type).toBe('UserRole');
+      expect(results.get('06').isPublicGroup).toBeFalsy();
+      expect(results.get('06').isQueue).toBeFalsy();
+      expect(results.get('06').nbDirectMembers).toBe(0);
+      expect(results.get('06').directUserIds.length).toBe(0);
+      expect(results.get('06').directGroupIds.length).toBe(0);
+      expect(results.get('06').includeBosses).toBeFalsy();
+      expect(results.get('06').includeSubordinates).toBeTruthy();
+      expect(results.get('06').relatedId).toBeUndefined(); // In this case we do not have a related role so relatedId is undefined!
+    });
+  });
+
   describe('Specific test for DatasetRecordTypes', () => { 
     const dataset = new DatasetRecordTypes();
     it('checks if regex are correct', async() => {
@@ -258,18 +328,37 @@ describe('tests.api.unit.Datasets', () => {
     const dataset = new DatasetCurrentUserPermissions();  
     it('checks if this dataset class runs correctly', async () => {
       const sfdcManager = new SfdcManagerMock();
-      sfdcManager.addSoqlQueryResponse('FROM UserPermissionAccess', [
-        { PermissionsA: true },
-        { PermissionsB: true },
-        { PermissionsC: true }
-      ]);
+      sfdcManager.addSoqlQueryResponse('SELECT PermissionsA FROM UserPermissionAccess', [{ PermissionsA: true }]);
+      sfdcManager.addSoqlQueryResponse('SELECT PermissionsB FROM UserPermissionAccess', [{ PermissionsB: false }]);
+      sfdcManager.addSoqlQueryResponse('SELECT PermissionsC FROM UserPermissionAccess', [{ PermissionsC: false }]);
       const dataFactory = new DataFactoryMock();
       const logger = new SimpleLoggerMock();
-      const parameters = new Map([ ['permissions', ['a', 'b']] ]);
+      const parameters = new Map([ ['permissions', ['A', 'B', 'c']] ]); // note the case difference on c!
       const results = await dataset.run(sfdcManager, dataFactory, logger, parameters);
       expect(results).toBeDefined();
       expect(results instanceof Map).toBeTruthy();
-      expect(results.size).toBe(1);
+      expect(results.size).toBe(3); // we only asked for 3 permissions a, b and c (not d!)
+      // PermissionsA is returned by Mock SOQL + the name matches the first parameters (capital A after "Permissions")
+      expect(results.has('PermissionsA')).toBeTruthy(); // the key is present in the result map
+      expect(results.get('PermissionsA')).toBeTruthy(); // and the value is true (value comes from Mock SOQL)
+      // PermissionsB is returned by Mock SOQL + the name matches the second parameters (capital B after "Permissions")
+      expect(results.has('PermissionsB')).toBeTruthy(); // the key is present in the result map
+      expect(results.get('PermissionsB')).toBeFalsy(); // and the value is false (value comes from Mock SOQL)
+      // PermissionsC is returned by Mock SOQL + BUT the name DOES NOT matches the third `parameters` map (lower c after "Permissions")
+      expect(results.has('PermissionsC')).toBeFalsy(); // the key is therefore NOT present in the result map
+      expect(results.get('PermissionsC')).toBeUndefined();  // Getting this key results of an undefined value
+      // Permissionsc is NOT returned by Mock SOQL + BUT the name matches the third parameters (lower c after "Permissions")
+      expect(results.has('Permissionsc')).toBeTruthy(); // the key is present in the result map
+      expect(results.get('Permissionsc')).toBeUndefined();  // Getting this key results of an undefined value because Mock SOQL did not return it
+    });
+    it('checks if this dataset class runs correctly when one of the permission is not defined in the org', async () => {
+      const sfdcManager = new SfdcManagerMock();
+      sfdcManager.addSoqlQueryResponse('SELECT PermissionsA FROM UserPermissionAccess', [{ PermissionsA: true }]);
+      sfdcManager.addSoqlQueryResponse('SELECT PermissionsZ FROM UserPermissionAccess', []); // PermissionsZ is an invalid field for this org but as we byPass 'INVALID_FIELD', the manager return an empty array
+      const dataFactory = new DataFactoryMock();
+      const logger = new SimpleLoggerMock();
+      const resultsKO = await dataset.run(sfdcManager, dataFactory, logger, new Map([ ['permissions', ['A', 'Z']] ]));
+      expect(resultsKO).toBeDefined();
     });
   });
 
@@ -278,9 +367,10 @@ describe('tests.api.unit.Datasets', () => {
     it('checks if this dataset class runs correctly', async () => {
       const sfdcManager = new SfdcManagerMock();
       sfdcManager.addSoqlQueryResponse('FROM FieldPermissions', [
-        { Field: 'Account.Name', PermissionsRead: true, PermissionsEdit: true, ParentId: '123', Parent: { IsOwnedByProfile: false, ProfileId: null }},
-        { Field: 'Account.Name', PermissionsRead: true, PermissionsEdit: false, ParentId: '456', Parent: { IsOwnedByProfile: true, ProfileId: 'ABC' }},
-        { Field: 'Account.Name', PermissionsRead: false, PermissionsEdit: false, ParentId: '789', Parent: { IsOwnedByProfile: true, ProfileId: 'XYZ' }}
+        { Field: 'Account.Name', PermissionsRead: true, PermissionsEdit: true, ParentId: '0MQ123', Parent: null},
+        { Field: 'Account.Name', PermissionsRead: true, PermissionsEdit: true, ParentId: '0PS123', Parent: { IsOwnedByProfile: false, ProfileId: null }},
+        { Field: 'Account.Name', PermissionsRead: true, PermissionsEdit: false, ParentId: '0PS456', Parent: { IsOwnedByProfile: true, ProfileId: '00eABC' }},
+        { Field: 'Account.Name', PermissionsRead: false, PermissionsEdit: false, ParentId: '0PS789', Parent: { IsOwnedByProfile: true, ProfileId: 'XYZ' }}
       ]);
       const dataFactory = new DataFactoryMock();
       const logger = new SimpleLoggerMock();

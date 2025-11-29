@@ -22,6 +22,7 @@ export class DatasetPermissionSets extends Dataset {
         const results = await sfdcManager.soqlQuery([{
             string: 'SELECT Id, Name, Description, IsCustom, License.Name, NamespacePrefix, Type, ' +
                         'PermissionsApiEnabled, PermissionsViewSetup, PermissionsModifyAllData, PermissionsViewAllData, ' +
+                        'PermissionsManageUsers, PermissionsCustomizeApplication, ' +
                         'CreatedDate, LastModifiedDate ' +
                     'FROM PermissionSet ' +
                     'WHERE IsOwnedByProfile = FALSE '+
@@ -52,6 +53,7 @@ export class DatasetPermissionSets extends Dataset {
             string: 'SELECT PermissionSetId, COUNT(Id) CountAssignment '+ 
                     'FROM PermissionSetAssignment '+
                     'WHERE PermissionSet.IsOwnedByProfile = FALSE '+
+                    'AND Assignee.IsActive = TRUE '+
                     'GROUP BY PermissionSetId '+
                     'ORDER BY PermissionSetId '+
                     'LIMIT 2000'
@@ -85,6 +87,7 @@ export class DatasetPermissionSets extends Dataset {
             const isPermissionSetGroup = (record.Type === 'Group'); // other values can be 'Regular', 'Standard', 'Session'
 
             // Create the instance
+            /** @type {SFDC_PermissionSet} */
             const permissionSet = permissionSetDataFactory.create({
                 properties: {
                     id: id,
@@ -107,8 +110,16 @@ export class DatasetPermissionSets extends Dataset {
                         apiEnabled: record.PermissionsApiEnabled === true,
                         viewSetup: record.PermissionsViewSetup === true, 
                         modifyAllData: record.PermissionsModifyAllData === true, 
-                        viewAllData: record.PermissionsViewAllData === true
+                        viewAllData: record.PermissionsViewAllData === true,
+                        manageUsers: record.PermissionsManageUsers === true,
+                        customizeApplication: record.PermissionsCustomizeApplication === true
                     },
+                    isAdminLike: (
+                        record.PermissionsModifyAllData === true || 
+                        record.PermissionsViewAllData === true ||
+                        record.PermissionsManageUsers === true || 
+                        record.PermissionsCustomizeApplication === true
+                    ),
                     url: (isPermissionSetGroup === false ? sfdcManager.setupUrl(id, SalesforceMetadataTypes.PERMISSION_SET) : '')
                 }
             });
